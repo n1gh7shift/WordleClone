@@ -1,0 +1,40 @@
+﻿@page "/Random"
+<h3>RandomWords</h3>
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        await test2();
+
+    }
+    private async Task test2()
+    {
+        var client = new HttpClient();
+        var request = new HttpRequestMessage
+            {
+                Method = HttpMethod.Get,
+                RequestUri = new Uri("https://random-words5.p.rapidapi.com/getMultipleRandom?count=5&wordLength=5"),
+                Headers =
+                {
+                    { "x-rapidapi-host", "random-words5.p.rapidapi.com" },
+                    { "x-rapidapi-key", "f5541f1923msh471c8a5350dedf0p1e20d0jsn14fdfc21f08b" },
+                },
+            };
+        using (var response = await client.SendAsync(request))
+        {
+            response.EnsureSuccessStatusCode();
+            var body = await response.Content.ReadAsStringAsync();
+            body = body.Substring(2, 5);
+
+            
+            
+            Console.WriteLine(body);
+
+        }
+    }
+   
+//["oasis","plain","brown","wreak","mores"]
+}
+    
+
+

@@ -1,7 +1,7 @@
 ﻿@page "/"
 
 @using System
-
+@using Data
 
 
 <div class="game-container">
@@ -12,12 +12,12 @@
 
         @for (int i = 0; i < 6; i++)
         {
-            
+
             <div class="guessRow" id="guessRow-">
-            @for (int j = 0; j < 5; j++)
-            {
-                <div class="tile @gameBoard[i][j].colour">@gameBoard[i][j].letter</div>
-            }
+                @for (int j = 0; j < 5; j++)
+                {
+                    <div class="tile @gameBoard[i][j].colour">@gameBoard[i][j].letter</div>
+                }
             </div>
         }
     </div>
@@ -31,6 +31,8 @@
 
 @code{
     private string wordle = "surfs".ToUpper();
+
+    private RandomWords rw = new();
 
     private int currentRow = 0;
     private int currentTile = 0;
@@ -46,6 +48,31 @@
 
     public Tile blankTile = new Tile() { letter = "", colour = "" };
 
+    private async Task<string> getRandomWords()
+    {
+
+        var client = new HttpClient();
+        var request = new HttpRequestMessage
+            {
+                Method = HttpMethod.Get,
+                RequestUri = new Uri("https://random-words5.p.rapidapi.com/getMultipleRandom?count=5&wordLength=5"),
+                Headers =
+                    {
+                        { "x-rapidapi-host", "random-words5.p.rapidapi.com" },
+                        { "x-rapidapi-key", "f5541f1923msh471c8a5350dedf0p1e20d0jsn14fdfc21f08b" },
+                    },
+            };
+        using (var response = await client.SendAsync(request))
+        {
+            response.EnsureSuccessStatusCode();
+            var body = await response.Content.ReadAsStringAsync();
+            body = body.Substring(2, 5);
+            Log($"The word is {body}");
+            wordle = body.ToUpper();
+            return (body);
+        }
+
+    }
 
     private async Task keyClicked(string letter)
     {
@@ -73,13 +100,13 @@
                 {
                     Log($"Check guess was Incorrect on attempt {currentRow + 1 } - Final");
                     Log($"Game Over Requested");
-                    GameOver("Game Over!");
+                    await GameOver("Game Over!");
                 }
                 else
                 {
                     Log($"Check Guess was Correct");
                     Log($"Game Over Requested");
-                    GameOver("Magnificent!");
+                    await GameOver("Magnificent!");
                 }
 
 
@@ -243,15 +270,17 @@
         }
     }
 
-    private async void GameOver(string Message)
+    private async Task GameOver(string Message)
     {
         Log($"GameOver activated - with message {Message}");
         await showMessage(Message);
         await Task.Delay(3000);
-        resetGame();
+        await resetGame();
         await InvokeAsync(StateHasChanged);
     }
-    private void resetGame(){
+    private async Task resetGame(){
+        await getRandomWords();
+
         for (int i = 0; i < 6; i++)
         {
             for (int j = 0; j < 5; j++)
@@ -267,11 +296,11 @@
         }
         currentRow = 0;
         currentTile = 0;
-        InvokeAsync(StateHasChanged);
+        await InvokeAsync(StateHasChanged);
         //get new word
     }
 
-    private void InitialiseGameBoard()
+    private async Task InitialiseGameBoard()
     {
         for (int i = 0; i < 6; i++)
         {
@@ -281,10 +310,10 @@
                 gameBoard[i].Add(new Tile() { letter = "", colour = "" });
             }
         }
-
+        await resetGame();
     }
 
-    private void InitialiseKeyboard()
+    private async Task InitialiseKeyboard()
     {
         foreach (var t in keys)
         {
@@ -292,10 +321,11 @@
         }
     }
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        InitialiseGameBoard();
-        InitialiseKeyboard();
+        await InitialiseGameBoard();
+        await InitialiseKeyboard();
     }
+
 
 }
