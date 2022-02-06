@@ -1,0 +1,163 @@
+﻿@page "/"
+
+@using System
+
+
+
+<div class="game-container">
+    <div class="title-container"><h1>Wordle</h1></div>
+    <div class="message-container">@onscreenMessage</div>
+    <div class="tile-container">
+        
+
+        @for (int i = 0; i < 6; i++)
+        {
+            
+            <div class="guessRow" id="guessRow-">
+            @for (int j = 0; j < 5; j++)
+            {
+                <div class="tile">@gameBoard[i,j]</div>
+            }
+            </div>
+        }
+    </div>
+    <div class="key-container"> 
+        @foreach (var t in keys)
+        {
+            <button @onclick="@(() => keyClicked(@t))" id="@t">@t</button>
+        }
+    </div>
+</div>
+
+@code{
+    private string wordle = "super";
+    private int currentRow = 0;
+    private int currentTile = 0;
+    private string onscreenMessage = "";
+
+    string[,] gameBoard = new string[6, 5];
+
+    /*
+    public List<List<Tile>> gameBoard = new();
+    public class Tile
+    {
+        public string letter { get; set; } = "";
+        public string colour { get; set; } = "no";
+    }
+    */
+
+    void keyClicked(string letter)
+    {
+        Log($"Clicked {letter}");
+        if (letter == "<<")
+        {
+            if(currentTile > 0){
+                currentTile--;
+                Log($"Deleting {gameBoard[currentRow, currentTile]}");
+                gameBoard[currentRow, currentTile] = "";
+
+
+            }
+        }
+        else if (letter == "ENTER")
+        {
+            if (!String.IsNullOrEmpty(gameBoard[currentRow,4]) && currentRow < 5)
+            {
+                checkGuess();
+                if( checkGuess() == false)
+                {
+                    Log($"Check guess was false");
+                    currentRow++;
+                    currentTile = 0;
+                }
+                else
+                {
+                    Log($"Check Guess was True");
+                }
+
+            }
+        }
+        else if(currentTile < 5 )
+        {
+            gameBoard[currentRow, currentTile] = letter;
+            currentTile++;
+        }
+        Log($"Current Row - {currentRow} - Current Tile - {currentTile}");
+    }
+
+    private async Task showMessage(string message)
+    {
+        onscreenMessage = $"{message}";
+        await InvokeAsync(StateHasChanged);
+        await Task.Delay(3000);
+        onscreenMessage = $"";
+        await InvokeAsync(StateHasChanged);
+    }
+
+
+    private string[] keys = new string[]{"q","w","e","r","t","y","u","i","o","p","a","s","d","f","g","h","j","k","l","ENTER","z","x","c","v","b","n","m","<<"};
+
+    private bool logEnable = true;
+
+    private void Log(string log)
+    {
+        if (logEnable)
+        {
+            Console.WriteLine(log);
+        }
+
+    }
+    private bool checkGuess()
+    {
+        Log("Check Guess Run");
+        //get current row, collate the letters to make a word
+        // compare that word against the Wordle variable
+        // return game over game state based on result
+
+        string guess = "";
+        for (int i = 0; i < 5; i++)
+        {   
+            char currentLetter = gameBoard[currentRow, i][0];
+            //Log($"currentLetter={currentLetter}");
+            if (currentLetter == wordle[i])
+            {
+                Log($"Letter {currentLetter} matches {wordle[i]}");                
+            }
+            else if(wordle.IndexOf(currentLetter) >= 0){
+                Log($"Letter {currentLetter} matches at wrong positon. Correct postition is {wordle.IndexOf(currentLetter)}");
+            }
+            guess += gameBoard[currentRow, i];
+            Log($"guess building, guess={guess}");
+        }
+
+        guess = guess.ToLower();
+        Log($"guess to Lower - guess = {guess}");
+        if (guess == wordle)
+        {
+            Log($"Game Over Requested");
+            GameOver("Magnificent!");
+            return true;
+
+        }
+        else
+        {
+            return false;
+        }
+    }
+
+    private async void GameOver(string Message)
+    {
+        Log($"GameOver activated - with message {Message}");
+        await showMessage(Message);
+        await Task.Delay(3000);
+        resetGame();
+        await InvokeAsync(StateHasChanged);
+    }
+    private void resetGame(){
+        Array.Clear(gameBoard);
+        currentRow = 0;
+        currentTile = 0;
+        //get new word
+    }
+
+}
