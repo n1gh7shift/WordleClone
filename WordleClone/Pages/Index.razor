@@ -16,70 +16,79 @@
             <div class="guessRow" id="guessRow-">
             @for (int j = 0; j < 5; j++)
             {
-                <div class="tile">@gameBoard[i,j]</div>
+                <div class="tile @gameBoard[i][j].colour">@gameBoard[i][j].letter</div>
             }
             </div>
         }
     </div>
     <div class="key-container"> 
-        @foreach (var t in keys)
+        @foreach (var t in keyboard)
         {
-            <button @onclick="@(() => keyClicked(@t))" id="@t">@t</button>
+            <button class="@t.colour" @onclick="@(() => keyClicked(@t.key))" id="@t.key">@t.key</button>
         }
     </div>
 </div>
 
 @code{
-    private string wordle = "super";
+    private string wordle = "surfs".ToUpper();
+
     private int currentRow = 0;
     private int currentTile = 0;
     private string onscreenMessage = "";
 
-    string[,] gameBoard = new string[6, 5];
-
-    /*
     public List<List<Tile>> gameBoard = new();
     public class Tile
     {
         public string letter { get; set; } = "";
-        public string colour { get; set; } = "no";
+        public string colour { get; set; } = "";
+        public int checkValue { get; set; } = 0; //0 is none, 1 is correct position, 2 is incorrect position 3 is incorrect
     }
-    */
 
-    void keyClicked(string letter)
+    public Tile blankTile = new Tile() { letter = "", colour = "" };
+
+
+    private async Task keyClicked(string letter)
     {
         Log($"Clicked {letter}");
         if (letter == "<<")
         {
             if(currentTile > 0){
                 currentTile--;
-                Log($"Deleting {gameBoard[currentRow, currentTile]}");
-                gameBoard[currentRow, currentTile] = "";
-
-
+                Log($"Deleting {gameBoard[currentRow][currentTile].letter}");
+                gameBoard[currentRow][currentTile].letter = "";
             }
         }
         else if (letter == "ENTER")
         {
-            if (!String.IsNullOrEmpty(gameBoard[currentRow,4]) && currentRow < 5)
+            if (!String.IsNullOrEmpty(gameBoard[currentRow][4].letter) && currentRow < 6)
             {
-                checkGuess();
-                if( checkGuess() == false)
+                bool result = await checkGuess();
+                if( result == false && currentRow < 5)
                 {
-                    Log($"Check guess was false");
+                    Log($"Check guess was Incorrect on attempt {currentRow + 1}");
                     currentRow++;
                     currentTile = 0;
                 }
+                else if ( result == false && currentRow >= 5)
+                {
+                    Log($"Check guess was Incorrect on attempt {currentRow + 1 } - Final");
+                    Log($"Game Over Requested");
+                    GameOver("Game Over!");
+                }
                 else
                 {
-                    Log($"Check Guess was True");
+                    Log($"Check Guess was Correct");
+                    Log($"Game Over Requested");
+                    GameOver("Magnificent!");
                 }
 
+
             }
+
         }
         else if(currentTile < 5 )
         {
-            gameBoard[currentRow, currentTile] = letter;
+            gameBoard[currentRow][currentTile].letter = letter;
             currentTile++;
         }
         Log($"Current Row - {currentRow} - Current Tile - {currentTile}");
@@ -97,6 +106,15 @@
 
     private string[] keys = new string[]{"q","w","e","r","t","y","u","i","o","p","a","s","d","f","g","h","j","k","l","ENTER","z","x","c","v","b","n","m","<<"};
 
+    public List<Key> keyboard = new();
+
+    public class Key
+    {
+        public string colour = "";
+        public string key = "";
+    }
+
+
     private bool logEnable = true;
 
     private void Log(string log)
@@ -107,7 +125,8 @@
         }
 
     }
-    private bool checkGuess()
+
+    private async Task<bool> checkGuess()
     {
         Log("Check Guess Run");
         //get current row, collate the letters to make a word
@@ -115,27 +134,106 @@
         // return game over game state based on result
 
         string guess = "";
+        string checkWord = wordle;
         for (int i = 0; i < 5; i++)
-        {   
-            char currentLetter = gameBoard[currentRow, i][0];
+        {
+            char currentLetter = gameBoard[currentRow][i].letter[0];
+            Log($"checkword = {checkWord}");
             //Log($"currentLetter={currentLetter}");
-            if (currentLetter == wordle[i])
+            if (currentLetter == wordle[i])                                 //Correct Letter Correct Placement
             {
-                Log($"Letter {currentLetter} matches {wordle[i]}");                
+                Log($"Letter {currentLetter} matches {wordle[i]}");
+                gameBoard[currentRow][i].checkValue = 1;
+                Log($"row {currentRow} tile {i} checkValue set to 1");
+                if(checkWord.IndexOf(currentLetter) >= 0)
+                {
+                    Log($"if passed - result = {checkWord.IndexOf(currentLetter)}");
+                    checkWord = checkWord.Remove(checkWord.IndexOf(currentLetter), 1);
+                    Log($"checkWord is now {checkWord}");
+                }
+
             }
-            else if(wordle.IndexOf(currentLetter) >= 0){
-                Log($"Letter {currentLetter} matches at wrong positon. Correct postition is {wordle.IndexOf(currentLetter)}");
+
+        }
+        for (int i = 0; i < 5; i++)
+        {
+            char currentLetter = gameBoard[currentRow][i].letter[0];
+            if(gameBoard[currentRow][i].checkValue != 1)
+            {
+                if(checkWord.IndexOf(currentLetter) >= 0)
+                {                                                                //Correct Letter Wrong Position
+                    Log($"Letter {currentLetter} matches {checkWord} at wrong positon. Correct postition is {wordle.IndexOf(currentLetter)}");
+                    gameBoard[currentRow][i].checkValue = 2;
+                    checkWord = checkWord.Remove(checkWord.IndexOf(currentLetter), 1);
+
+                }
+                else                                                            //Incorrect Letter
+                {
+                    Log($"Letter does not match - \"{currentLetter}\"");
+                    gameBoard[currentRow][i].checkValue = 3;
+                }
             }
-            guess += gameBoard[currentRow, i];
+
+            guess += gameBoard[currentRow][i].letter;
             Log($"guess building, guess={guess}");
+
+        }
+        for (int i = 0; i < 5; i++)
+        {
+            if (gameBoard[currentRow][i].checkValue == 1)
+            {
+                gameBoard[currentRow][i].colour = "green-overlay";
+                foreach (var t in keyboard)
+                {
+                    if (t.key == gameBoard[currentRow][i].letter)
+                    {
+                        t.colour = "green-overlay";
+                        break;
+
+                    }
+                }
+
+            }
+            if (gameBoard[currentRow][i].checkValue == 2)
+            {
+                gameBoard[currentRow][i].colour = "yellow-overlay";
+                foreach (var t in keyboard)
+                {
+                    if (t.key == gameBoard[currentRow][i].letter)
+                    {
+                        t.colour = "yellow-overlay";
+                        break;
+
+                    }
+                }
+            }
+            if (gameBoard[currentRow][i].checkValue == 3)
+            {
+                gameBoard[currentRow][i].colour = "grey-overlay";
+                foreach (var t in keyboard)
+                {
+                    if (t.key == gameBoard[currentRow][i].letter)
+                    {
+                        t.colour = "grey-overlay";
+                        break;
+
+                    }
+                }
+            }
+
+            await Task.Delay(300);
+            await InvokeAsync(StateHasChanged);
+            Log($"await delay 500");
+
         }
 
-        guess = guess.ToLower();
+
+
+        guess = guess.ToUpper();
         Log($"guess to Lower - guess = {guess}");
         if (guess == wordle)
         {
-            Log($"Game Over Requested");
-            GameOver("Magnificent!");
+
             return true;
 
         }
@@ -154,10 +252,50 @@
         await InvokeAsync(StateHasChanged);
     }
     private void resetGame(){
-        Array.Clear(gameBoard);
+        for (int i = 0; i < 6; i++)
+        {
+            for (int j = 0; j < 5; j++)
+            {
+                gameBoard[i][j].letter = "";
+                gameBoard[i][j].colour = "";
+                gameBoard[i][j].checkValue = 0;
+            }
+        }
+        foreach (var t in keyboard)
+        {
+            t.colour = "";
+        }
         currentRow = 0;
         currentTile = 0;
+        InvokeAsync(StateHasChanged);
         //get new word
+    }
+
+    private void InitialiseGameBoard()
+    {
+        for (int i = 0; i < 6; i++)
+        {
+            gameBoard.Add(new List<Tile>());
+            for (int j = 0; j < 5; j++)
+            {
+                gameBoard[i].Add(new Tile() { letter = "", colour = "" });
+            }
+        }
+
+    }
+
+    private void InitialiseKeyboard()
+    {
+        foreach (var t in keys)
+        {
+            keyboard.Add(new Key() { colour = "", key = $"{t.ToUpper() }" });
+        }
+    }
+
+    protected override void OnInitialized()
+    {
+        InitialiseGameBoard();
+        InitialiseKeyboard();
     }
 
 }

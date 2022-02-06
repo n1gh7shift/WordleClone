@@ -79,24 +79,30 @@ body {
 .grey-overlay {
     background-color: #3a3a3c !important;
     border: none !important;
+    animation-name: flipping;
+    animation-duration: 1s;
 }
 
 .yellow-overlay {
     background-color: #b59f3a !important;
     border: none !important;
+    animation-name: flipping;
+    animation-duration: 1s;
 }
 
 .green-overlay {
     background-color: #538d4e !important;
     border: none !important;
+    animation-name: flipping;
+    animation-duration: 1s;
 }
 
 @keyframes flipping {
-    0 {
+    0% {
         transform: rotateX(0deg);
     }
     50% {
-        transform: rotateX(50deg)
+        transform: rotateX(90deg)
     }
     100% {
         transform: rotateX(0deg);
