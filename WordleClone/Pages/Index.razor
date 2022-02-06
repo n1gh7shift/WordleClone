@@ -32,8 +32,6 @@
 @code{
     private string wordle = "surfs".ToUpper();
 
-    private RandomWords rw = new();
-
     private int currentRow = 0;
     private int currentTile = 0;
     private string onscreenMessage = "";
@@ -87,31 +85,45 @@
         }
         else if (letter == "ENTER")
         {
-            if (!String.IsNullOrEmpty(gameBoard[currentRow][4].letter) && currentRow < 6)
+            if (String.IsNullOrEmpty(gameBoard[currentRow][4].letter))
             {
-                bool result = await checkGuess();
-                if( result == false && currentRow < 5)
-                {
-                    Log($"Check guess was Incorrect on attempt {currentRow + 1}");
-                    currentRow++;
-                    currentTile = 0;
+                await showMessage($"Require a 5 Letter Guess");
+            }else
+            {
+
+                bool validGuessCheck = await dictionaryWordCheck($"{gameBoard[currentRow][0].letter}{gameBoard[currentRow][1].letter}{gameBoard[currentRow][2].letter}{gameBoard[currentRow][3].letter}{gameBoard[currentRow][4].letter}");
+                if (validGuessCheck == false){
+                    await showMessage($"Not a valid word.");
                 }
-                else if ( result == false && currentRow >= 5)
-                {
-                    Log($"Check guess was Incorrect on attempt {currentRow + 1 } - Final");
-                    Log($"Game Over Requested");
-                    await GameOver("Game Over!");
-                }
-                else
-                {
-                    Log($"Check Guess was Correct");
-                    Log($"Game Over Requested");
-                    await GameOver("Magnificent!");
-                }
+                else{
+
+                    if (currentRow < 6)
+                    {
+
+                        bool result = await checkGuess();
+                        if (result == false && currentRow < 5)
+                        {
+                            Log($"Check guess was Incorrect on attempt {currentRow + 1}");
+                            currentRow++;
+                            currentTile = 0;
+                        }
+                        else if (result == false && currentRow >= 5)
+                        {
+                            Log($"Check guess was Incorrect on attempt {currentRow + 1 } - Final");
+                            Log($"Game Over Requested");
+                            await GameOver("Game Over!");
+                        }
+                        else
+                        {
+                            Log($"Check Guess was Correct");
+                            Log($"Game Over Requested");
+                            await GameOver("Magnificent!");
+                        }
 
 
+                    }
+                }
             }
-
         }
         else if(currentTile < 5 )
         {
@@ -325,6 +337,48 @@
     {
         await InitialiseGameBoard();
         await InitialiseKeyboard();
+    }
+
+    private async Task<bool> dictionaryWordCheck(string WordToTest)
+    {   
+        DictionaryWordCheck responseData;
+        Log($"Running Dictionary Check on word {WordToTest}");
+
+
+        var client = new HttpClient();
+        var request = new HttpRequestMessage
+
+        {
+            Method = HttpMethod.Get,
+            RequestUri = new Uri($"https://twinword-word-graph-dictionary.p.rapidapi.com/association/?entry={WordToTest}"),
+            Headers =
+            {
+                { "x-rapidapi-host", "twinword-word-graph-dictionary.p.rapidapi.com" },
+                { "x-rapidapi-key", "f5541f1923msh471c8a5350dedf0p1e20d0jsn14fdfc21f08b" },
+            },
+        };
+        using (var response = await client.SendAsync(request))
+        {
+            if(response.IsSuccessStatusCode){
+                responseData = await response.Content.ReadFromJsonAsync<DictionaryWordCheck>();
+
+                Log($"result_code=\"{responseData.result_code}\" and result_msg=\"{responseData.result_msg}\"");
+                if(responseData.result_code == "200")
+                {
+                    return true;
+                }
+                else
+                {
+                    await showMessage($"{responseData.result_msg}");
+                    return false;
+                }
+            }
+            else
+            {
+                showMessage($"There was an error: {response.ReasonPhrase}");
+                return false;
+            }
+        }
     }
 
 
