@@ -238,7 +238,7 @@
                 gameBoard[currentRow][i].colour = "yellow-overlay";
                 foreach (var t in keyboard)
                 {
-                    if (t.key == gameBoard[currentRow][i].letter)
+                    if (t.key == gameBoard[currentRow][i].letter && t.colour != "green-overlay")
                     {
                         t.colour = "yellow-overlay";
                         break;
@@ -251,7 +251,7 @@
                 gameBoard[currentRow][i].colour = "grey-overlay";
                 foreach (var t in keyboard)
                 {
-                    if (t.key == gameBoard[currentRow][i].letter)
+                    if (t.key == gameBoard[currentRow][i].letter && String.IsNullOrEmpty(t.colour))
                     {
                         t.colour = "grey-overlay";
                         break;
